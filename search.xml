@@ -3,7 +3,7 @@
   
     
     <entry>
-      <title><![CDATA[基于KVM虚拟化的管理工具--oVirt搭建]]></title>
+      <title><![CDATA[基于KVM虚拟化的管理工具--oVirt搭建（一）]]></title>
       <url>/2017/10/29/oVirt_install/</url>
       <content type="html"><![CDATA[<p>首先，需要准备两台内核在3.10以上的Linux服务器，这里以CentOS 7.4为例。两台服务器的IP地址和主机名分别为：<br>node1.test.com—-&gt;192.168.10.10—-oVirt管理端<br>node2.test.com—-&gt;192.168.10.11—-KVM虚拟化物理机<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line">[root@node1 ~]# hostname</div><div class="line">node1.test.com</div><div class="line">[root@node1 ~]# uname -a</div><div class="line">Linux node1.test.com 3.10.0-693.el7.x86_64 #1 SMP Tue Aug 22 21:09:27 UTC 2017 x86_64 x86_64 x86_64 GNU/Linux</div><div class="line">[root@node1 ~]# ifconfig |head -n 3</div><div class="line">ens32: flags=4163&lt;UP,BROADCAST,RUNNING,MULTICAST&gt;  mtu 1500</div><div class="line">        inet 192.168.10.10  netmask 255.255.255.0  broadcast 192.168.10.255</div><div class="line">        inet6 fe80::87e3:3b58:665:5b96  prefixlen 64  scopeid 0x20&lt;link&gt;</div></pre></td></tr></table></figure></p>
 <p>服务器配置好后，需要将SELinux、firewalld关闭，并且配置好yum源，建议采用aliyun的yum源。</p>
