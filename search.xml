@@ -3,6 +3,59 @@
   
     
     <entry>
+      <title><![CDATA[性能收集工具--NMON的部署使用]]></title>
+      <url>/2017/10/29/nmon_tools/</url>
+      <content type="html"><![CDATA[<hr>
+<p>Nmon 是一个分析AIX和Linux性能的免费工具（其主要是IBM为自己的AIX操作系统开发的，但是也可以应用在Linux操作系统上），而nmon_analyser是nmon的一个工具可以把nmon生成的报告转化成Excel报表的形式供我们查看。</p>
+<hr>
+<h4 id="下载nmon软件"><a href="#下载nmon软件" class="headerlink" title="下载nmon软件"></a>下载nmon软件</h4><hr>
+<p>打开浏览器输入：<a href="http://nmon.sourceforge.net/pmwiki.php，" target="_blank" rel="external">http://nmon.sourceforge.net/pmwiki.php，</a> 然后后点击“Download Binaries”，根据自己操作系统的版本下载对应版本的nmon工具。（这里以操作系统版本为 Redhat Enterprise Linux 6.8 X86_64版本为例，选在下载的安装包为 nmon16e_mpginc.tar.gz ）</p>
+<hr>
+<h4 id="安装nmon工具"><a href="#安装nmon工具" class="headerlink" title="安装nmon工具"></a>安装nmon工具</h4><hr>
+<p>将下载的安装包nmon16e_mpginc.tar.gz上传到linux服务器中，然后解压缩。</p>
+<hr>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div></pre></td><td class="code"><pre><div class="line">[root@host ~]# ls</div><div class="line">nmon16e_mpginc.tar.gz</div><div class="line">[root@host ~]# tar -xzvf nmon16e_mpginc.tar.gz </div><div class="line">nmon_arm_ubuntu15</div><div class="line">nmon_power_32_rhel6</div><div class="line">nmon_power_32_sles11</div><div class="line">nmon_power_64_kvm2</div><div class="line">nmon_power_64_rhel6</div><div class="line">nmon_power_64_rhel7</div><div class="line">nmon_power_64_sles11</div><div class="line">nmon_power_64le_fedora22</div><div class="line">nmon_power_64le_rhel6</div><div class="line">nmon_power_64le_rhel7</div><div class="line">nmon_power_64le_ubuntu14</div><div class="line">nmon_power_64le_ubuntu15</div><div class="line">nmon_power_64le_ubuntu16</div><div class="line">nmon_x86_64_centos6</div><div class="line">nmon_x86_64_centos7</div><div class="line">nmon_x86_64_opensuse11</div><div class="line">nmon_x86_64_opensuse12</div><div class="line">nmon_x86_64_rhel6</div><div class="line">nmon_x86_64_rhel7</div><div class="line">nmon_x86_64_sles11</div><div class="line">nmon_x86_64_sles12</div><div class="line">nmon_x86_64_ubuntu15</div><div class="line">[root@host ~]#</div><div class="line">*****</div></pre></td></tr></table></figure>
+<p>选择对应的执行文件nmon_x86_64_rhel6，查看该文件的权限。给该文件赋予可执行的权限。</p>
+<hr>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line">[root@host ~]# ll nmon_x86_64_rhel6 </div><div class="line">-rwxr----- 1 root root 347506 Apr 14  2016 nmon_x86_64_rhel6</div><div class="line">[root@host ~]# chmod +x nmon_x86_64_rhel6</div><div class="line">[root@host ~]# ll nmon_x86_64_rhel6 </div><div class="line">-rwxr-x--x 1 root root 347506 Apr 14  2016 nmon_x86_64_rhel6</div></pre></td></tr></table></figure>
+<hr>
+<p>为了确保nmon执行后有个固定的目录存放收集到的nmon数据，需要新建一个目录用于保存。然后将rhel6的nmon执行文件移到该目录下。</p>
+<hr>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">[root@host /]# mkdir -p /nmon/nmon_x86_64_linux6</div><div class="line">[root@host ~]# mv nmon_x86_64_rhel6 /nmon/nmon_x86_64_linux6/</div></pre></td></tr></table></figure>
+<hr>
+<p>然后定义一个脚本用于每天定时执行该脚本收集服务器的性能数据</p>
+<hr>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div></pre></td><td class="code"><pre><div class="line">[root@host nmon_x86_64_linux6]# mkdir day</div><div class="line">[root@host nmon_x86_64_linux6]# cd day/</div><div class="line">[root@host day]# pwd</div><div class="line">/nmon/nmon_x86_64_linux6/day</div><div class="line">[root@host day]# cat nmon_day.sh </div><div class="line">#!/bin/bash</div><div class="line">mkdir /nmon/day/</div><div class="line">cd /nmon/day</div><div class="line">gzip *.nmon</div><div class="line">find /nmon/nmon_x86_64_linux6/day/* -mtime 7 -exec rm &#123; &#125; \;</div><div class="line">/nmon/nmon_x86_64_linux6/nmon_x86_64_rhel6 -fdt -s 300 -c 288</div></pre></td></tr></table></figure>
+<hr>
+<p>说明：nmon_day.sh是用来每天定时执行nmon的脚本，里面定义了nmon收集性能的颗粒度，范例是以每5分钟收集一次（5min*60sec）,然后总共收集288次（即收集一天的数据）；另外范例还定义了nmon数据保存的生命周期，当nmon保存的时间超过7天则删除该数据；同时在第二天启动该脚本时会自动将第一天的数据进行打包。<br>然后将该脚本添加到crontab钟，定义每天早上8点自动执行该脚本。</p>
+<hr>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">[root@host nmon_x86_64_linux6]# crontab -l</div><div class="line">00 08 * * * /nmon/nmon_x86_64_linux6/day/nmon_day.sh</div></pre></td></tr></table></figure>
+<h4 id="nmon分析工具–nmon-analyser"><a href="#nmon分析工具–nmon-analyser" class="headerlink" title="nmon分析工具–nmon_analyser"></a>nmon分析工具–nmon_analyser</h4><hr>
+<p>首先需要从IBM的网站下载nmon Analyser，网址：<br><a href="https://www.ibm.com/developerworks/community/wikis/home?lang=en#!/wiki/Power+Systems/page/nmon_analyser" target="_blank" rel="external">https://www.ibm.com/developerworks/community/wikis/home?lang=en#!/wiki/Power+Systems/page/nmon_analyser</a>.<br>Nmon_Analyser下载下来后就是一个Excel，但是这个Excel就是我们需要的工具了。双击打开这个Excel文件，点击“Analyze nmon data”，然后选择我们刚才生成的nmon文件，大概十几秒左右（数据量不同，生成的时间也不一样）就会生成我们需要的报表了。此时我们就可以更加直观的观看CPU，内存等数据了。</p>
+<hr>
+<h4 id="注意事项"><a href="#注意事项" class="headerlink" title="注意事项"></a>注意事项</h4><hr>
+<p>nmon analyser需要借助Excel的宏，当弹出“启用宏”还是“禁用宏”时，需要选择“启用宏”，然后点击“Analyze nmon data”，选择你收集到的*.nmon文件进行分析，最后得到的.xlsx就是分析后的结果，里面将会呈现该服务器在CPU、内存、IO、文件使用等相关性能信息。</p>
+<hr>
+]]></content>
+      
+        <categories>
+            
+            <category> Tools </category>
+            
+        </categories>
+        
+        
+        <tags>
+            
+            <tag> Tools </tag>
+            
+            <tag> nmon </tag>
+            
+        </tags>
+        
+    </entry>
+    
+    <entry>
       <title><![CDATA[Hello World]]></title>
       <url>/2017/10/19/hello-world/</url>
       <content type="html"><![CDATA[<p>Welcome to <a href="https://hexo.io/" target="_blank" rel="external">Hexo</a>! This is your very first post. Check <a href="https://hexo.io/docs/" target="_blank" rel="external">documentation</a> for more info. If you get any problems when using Hexo, you can find the answer in <a href="https://hexo.io/docs/troubleshooting.html" target="_blank" rel="external">troubleshooting</a> or you can ask me on <a href="https://github.com/hexojs/hexo/issues" target="_blank" rel="external">GitHub</a>.</p>
@@ -23,14 +76,14 @@
   
     
     <entry>
-      <title><![CDATA[标签]]></title>
-      <url>/tags/index.html</url>
+      <title><![CDATA[分类]]></title>
+      <url>/categories/index.html</url>
       <content type="html"></content>
     </entry>
     
     <entry>
-      <title><![CDATA[分类]]></title>
-      <url>/categories/index.html</url>
+      <title><![CDATA[标签]]></title>
+      <url>/tags/index.html</url>
       <content type="html"></content>
     </entry>
     
