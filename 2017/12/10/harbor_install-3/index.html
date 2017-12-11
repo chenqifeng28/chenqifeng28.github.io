@@ -86,18 +86,31 @@
 
 
 
-<meta name="description" content="问题1：Error response from daemon: Get https://harbor1.test.com/v1/users/: x509: certificate signed by unknown authority用命令行登陆harbor时报错，具体如下：1234[root@harbor1 harbor]# docker login harbor1.test.comUserna">
+<meta name="description" content="harbor 安装（HTTPS模式）在加入了根证书后用浏览器访问出现证书错误，于是用脚本再次生成新的证书并导入依旧证书错误，终于在harbor.cfg中找到了原因（没有仔细查看配置说明，走了好多弯路），配置文件中标注了如果使用自签名将核实远程证书设为off12345[root@harbor1 harbor]# vi harbor.cfg...#Determine whether the job s">
 <meta name="keywords" content="Technology,Harbor,Registry,Docker">
 <meta property="og:type" content="article">
 <meta property="og:title" content="用Harbor实现容器镜像仓库的管理和运维&lt;三&gt;">
 <meta property="og:url" content="http://chenqifeng28.github.io/2017/12/10/harbor_install-3/index.html">
 <meta property="og:site_name" content="Chen&#39;s Blog">
-<meta property="og:description" content="问题1：Error response from daemon: Get https://harbor1.test.com/v1/users/: x509: certificate signed by unknown authority用命令行登陆harbor时报错，具体如下：1234[root@harbor1 harbor]# docker login harbor1.test.comUserna">
+<meta property="og:description" content="harbor 安装（HTTPS模式）在加入了根证书后用浏览器访问出现证书错误，于是用脚本再次生成新的证书并导入依旧证书错误，终于在harbor.cfg中找到了原因（没有仔细查看配置说明，走了好多弯路），配置文件中标注了如果使用自签名将核实远程证书设为off12345[root@harbor1 harbor]# vi harbor.cfg...#Determine whether the job s">
 <meta property="og:locale" content="zh-Hans">
-<meta property="og:updated_time" content="2017-12-10T09:43:18.400Z">
+<meta property="og:image" content="http://oys2ph34f.bkt.clouddn.com/harbor_replication-1.jpg">
+<meta property="og:image" content="http://oys2ph34f.bkt.clouddn.com/harbor_replication-2.jpg">
+<meta property="og:image" content="http://oys2ph34f.bkt.clouddn.com/harbor_replication-3.jpg">
+<meta property="og:image" content="http://oys2ph34f.bkt.clouddn.com/harbor_sync_1.jpg">
+<meta property="og:image" content="http://oys2ph34f.bkt.clouddn.com/harbor_sync_2.jpg">
+<meta property="og:image" content="http://oys2ph34f.bkt.clouddn.com/harbor_sync_3.jpg">
+<meta property="og:image" content="http://oys2ph34f.bkt.clouddn.com/harbor_sync_4.jpg">
+<meta property="og:image" content="http://oys2ph34f.bkt.clouddn.com/harbor_sync_5.jpg">
+<meta property="og:image" content="http://oys2ph34f.bkt.clouddn.com/harbor_sync_6.jpg">
+<meta property="og:image" content="http://oys2ph34f.bkt.clouddn.com/harbor_sync_7.jpg">
+<meta property="og:image" content="http://oys2ph34f.bkt.clouddn.com/harbor_replication_error.png">
+<meta property="og:image" content="http://oys2ph34f.bkt.clouddn.com/harbor_sync_error_1.jpg">
+<meta property="og:updated_time" content="2017-12-11T07:40:56.696Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="用Harbor实现容器镜像仓库的管理和运维&lt;三&gt;">
-<meta name="twitter:description" content="问题1：Error response from daemon: Get https://harbor1.test.com/v1/users/: x509: certificate signed by unknown authority用命令行登陆harbor时报错，具体如下：1234[root@harbor1 harbor]# docker login harbor1.test.comUserna">
+<meta name="twitter:description" content="harbor 安装（HTTPS模式）在加入了根证书后用浏览器访问出现证书错误，于是用脚本再次生成新的证书并导入依旧证书错误，终于在harbor.cfg中找到了原因（没有仔细查看配置说明，走了好多弯路），配置文件中标注了如果使用自签名将核实远程证书设为off12345[root@harbor1 harbor]# vi harbor.cfg...#Determine whether the job s">
+<meta name="twitter:image" content="http://oys2ph34f.bkt.clouddn.com/harbor_replication-1.jpg">
 
 
 
@@ -404,7 +417,7 @@
                   <span class="post-meta-item-text">字数统计&#58;</span>
                 
                 <span title="字数统计">
-                  267
+                  2,216
                 </span>
               
 
@@ -420,7 +433,7 @@
                   <span class="post-meta-item-text">阅读时长 &asymp;</span>
                 
                 <span title="阅读时长">
-                  1
+                  10
                 </span>
               
             </div>
@@ -441,9 +454,39 @@
       
 
       
-        <p><strong>问题1</strong>：<br>Error response from daemon: Get <a href="https://harbor1.test.com/v1/users/" target="_blank" rel="external">https://harbor1.test.com/v1/users/</a>: x509: certificate signed by unknown authority<br>用命令行登陆harbor时报错，具体如下：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">[root@harbor1 harbor]# docker login harbor1.test.com</div><div class="line">Username (admin): admin</div><div class="line">Password: </div><div class="line">Error response from daemon: Get https://harbor1.test.com/v1/users/: x509: certificate signed by unknown authority</div></pre></td></tr></table></figure></p>
-<p>解决方法：<br>由于自创的证书还没有加入系统级别信任，因此需要将证书加入系统级别信任<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">[root@harbor1 harbor]# cp /data/cert/server.crt /etc/pki/ca-trust/source/anchors/reg.test.com.crt</div><div class="line">[root@harbor1 harbor]# update-ca-trust</div></pre></td></tr></table></figure></p>
-<p>在加入了根证书后用浏览器访问出现证书错误，于是用脚本再次生成新的证书并导入依旧证书错误，终于在harbor.cfg中找到了原因（没有仔细查看配置说明，走了好多弯路），配置文件中标注了如果使用自签名将核实远程证书设为off<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line">[root@harbor1 harbor]# vi harbor.cfg</div><div class="line">...</div><div class="line">#Determine whether the job service should verify the ssl cert when it connects to a remote registry.</div><div class="line">#Set this flag to off when the remote registry uses a self-signed or untrusted certificate.</div><div class="line">verify_remote_cert = on  &lt;!--将这里的on改为off--&gt;</div></pre></td></tr></table></figure></p>
+        <h1 id="harbor-安装（HTTPS模式）"><a href="#harbor-安装（HTTPS模式）" class="headerlink" title="harbor 安装（HTTPS模式）"></a>harbor 安装（HTTPS模式）</h1><p>在加入了根证书后用浏览器访问出现证书错误，于是用脚本再次生成新的证书并导入依旧证书错误，终于在harbor.cfg中找到了原因（没有仔细查看配置说明，走了好多弯路），配置文件中标注了如果使用自签名将核实远程证书设为off<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line">[root@harbor1 harbor]# vi harbor.cfg</div><div class="line">...</div><div class="line">#Determine whether the job service should verify the ssl cert when it connects to a remote registry.</div><div class="line">#Set this flag to off when the remote registry uses a self-signed or untrusted certificate.</div><div class="line">verify_remote_cert = on  &lt;!--将这里的on改为off--&gt;</div></pre></td></tr></table></figure></p>
+<h1 id="harbor镜像同步"><a href="#harbor镜像同步" class="headerlink" title="harbor镜像同步"></a>harbor镜像同步</h1><h2 id="为什么需要镜像同步"><a href="#为什么需要镜像同步" class="headerlink" title="为什么需要镜像同步"></a>为什么需要镜像同步</h2><hr>
+<p>由于对镜像的访问是一个核心的容器概念，在实际使用过程中，一个镜像库可能是不够用的，下例情况下，我们可能会需要部署多个镜像仓库：</p>
+<p>国外的公有镜像下载过慢，需要一个中转仓库进行加速<br>容器规模较大，一个镜像仓库不堪重负<br>对系统稳定性要求高，需要多个仓库保证高可用性<br>镜像仓库有多级规划，下级仓库依赖上级仓库<br>更常用的场景是，在企业级软件环境中，会在软件开发的不同阶段存在不同的镜像仓库，</p>
+<p>在开发环境库，开发人员频繁修改镜像，一旦代码完成，生成稳定的镜像即需要同步到测试环境。<br>在测试环境库，测试人员对镜像是只读操作，测试完成后，将镜像同步到预上线环境库。<br>在预上线环境库，运维人员对镜像也是只读操作，一旦运行正常，即将镜像同步到生产环境库。<br>在这个流程中，各环境的镜像库之间都需要镜像的同步和复制。</p>
+<hr>
+<h2 id="Harbor的镜像同步机制"><a href="#Harbor的镜像同步机制" class="headerlink" title="Harbor的镜像同步机制"></a>Harbor的镜像同步机制</h2><hr>
+<p>有了多个镜像仓库，在多个仓库之间进行镜像同步马上就成为了一个普遍的需求。比较传统的镜像同步方式，有两种：</p>
+<p>第一种方案，使用Linux提供的RSYNC服务来定义两个仓库之间的镜像数据同步。<br>第二种方案，对于使用IaaS服务进行镜像存储的场景，利用IaaS的配置工具来对镜像的同步进行配置。<br>这两种方案都依赖于仓库所在的存储环境，而需要采用不同的工具策略。Harbor则提供了更加灵活的方案来处理镜像的同步，其核心是三个概念：</p>
+<p>用Harbor自己的API来进行镜像下载和传输，作到与底层存储环境解耦。<br>利用任务调度和监控机制进行复制任务的管理，保障复制任务的健壮性。在同步过程中，如果源镜像已删除，Harbor会自动同步删除远端的镜像。在镜像同步复制的过程中，Harbor会监控整个复制过程，遇到网络等错误，会自动重试。<br>提供复制策略机制保证项目级的复制需求。在Harbor中，可以在项目中创建复制策略，来实现对镜像的同步。与Docker Registry的不同之处在于，Harbor的复制是推（PUSH）的策略，由源端发起，而Docker Registry的复制是拉（PULL）的策略，由目标端发起。</p>
+<hr>
+<p><img src="http://oys2ph34f.bkt.clouddn.com/harbor_replication-1.jpg" alt="harbor_replication-1"></p>
+<h2 id="Harbor的多级部署"><a href="#Harbor的多级部署" class="headerlink" title="Harbor的多级部署"></a>Harbor的多级部署</h2><hr>
+<p>在实际的企业级生产运维场景，往往需要跨地域，跨层级进行镜像的同步复制，比如从开发到测试再到生产。<br>这一部署场景可简化如下图：</p>
+<hr>
+<p><img src="http://oys2ph34f.bkt.clouddn.com/harbor_replication-2.jpg" alt="harbor_replication-2"><br>更复杂的部署场景如下图：<br><img src="http://oys2ph34f.bkt.clouddn.com/harbor_replication-3.jpg" alt="harbor_replication-3"></p>
+<h2 id="镜像同步配置"><a href="#镜像同步配置" class="headerlink" title="镜像同步配置"></a>镜像同步配置</h2><p><strong>环境介绍</strong></p>
+<hr>
+<p>Master：192.168.10.19  —&gt;   harbor1.test.com<br>Slave ：192.168.10.21  —&gt;   harbor2.test.com</p>
+<hr>
+<p>两个harbor节点都采用的HTTP模式</p>
+<p>首先登陆到harbor的网页，进入到系统管理-&gt;复制管理<br><img src="http://oys2ph34f.bkt.clouddn.com/harbor_sync_1.jpg" alt="harbor_sync_1"><br>点击“+目标”，创建复制的目标，并测试连接。<br><img src="http://oys2ph34f.bkt.clouddn.com/harbor_sync_2.jpg" alt="harbor_sync_2"><br>如下为创建好一个复制目标<br><img src="http://oys2ph34f.bkt.clouddn.com/harbor_sync_3.jpg" alt="harbor_sync_3"><br>目标创建好之后，返回到项目并且进入需要同步的项目中，并进入复制规则页面<br><img src="http://oys2ph34f.bkt.clouddn.com/harbor_sync_4.jpg" alt="harbor_sync_4"><br>点击“+复制规则”，创建镜像同步的规则并且再次测试连接是否成功。<br><img src="http://oys2ph34f.bkt.clouddn.com/harbor_sync_5.jpg" alt="harbor_sync_5"><br>待测试连接成功后，点击确定。创建好的复制规则如下：<br><img src="http://oys2ph34f.bkt.clouddn.com/harbor_sync_6.jpg" alt="harbor_sync_6"><br>可以看到在页面下方的复制任务栏里会将需要同步的镜像作为任务显示出来，，这里可以看到所有任务的状态都变为finished，说明同步已经完成。<br>登陆到Slave节点harbor2.test.com，可以看到在原本只有一个library项目的基础上，自动增加了一个cqf项目，并且里面已经包含了相关的镜像，同步成功。<br><img src="http://oys2ph34f.bkt.clouddn.com/harbor_sync_7.jpg" alt="harbor_sync_7"></p>
+<hr>
+<p><strong>问题1</strong>：</p>
+<hr>
+<p>在创建复制目标测试连接时一直报“测试连接失败”。<br>解决方法：<br>由于harbor创建时使用的域名访问的方式，因此经检查发现时harbor运行的container无法解析harbor2.test.com，导致无法将相应的请求送达的原因。<br>因此需要登陆到UI所在container，修改/etc/resolv.conf和/etc/hosts<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div><div class="line">58</div><div class="line">59</div><div class="line">60</div><div class="line">61</div><div class="line">62</div><div class="line">63</div><div class="line">64</div><div class="line">65</div><div class="line">66</div><div class="line">67</div><div class="line">68</div></pre></td><td class="code"><pre><div class="line">[root@harbor2 ui]# docker exec -it 2f30038f9592 /bin/bash    &lt;!--连接上UI所在的container--&gt;</div><div class="line">root [ /harbor ]# vi /etc/resolv.conf                                                                    </div><div class="line">search localdomain test.com</div><div class="line">nameserver 127.0.0.11</div><div class="line">options ndots:0</div><div class="line">nameserver 192.168.10.2     &lt;!--添加192.168.10.2--&gt;</div><div class="line">&quot;/etc/resolv.conf&quot; 4L, 90C written                                                      </div><div class="line">root [ /harbor ]# cat /etc/hosts </div><div class="line">127.0.0.1	localhost</div><div class="line">::1	localhost ip6-localhost ip6-loopback</div><div class="line">fe00::0	ip6-localnet</div><div class="line">ff00::0	ip6-mcastprefix</div><div class="line">ff02::1	ip6-allnodes</div><div class="line">ff02::2	ip6-allrouters</div><div class="line">172.18.0.6	2f30038f9592</div><div class="line">root [ /harbor ]# echo &quot;192.168.10.19 harbor1.test.com&quot; &gt;&gt; /etc/hosts                                    </div><div class="line">root [ /harbor ]# echo &quot;192.168.10.21 harbor2.test.com&quot; &gt;&gt; /etc/hosts                                    </div><div class="line">root [ /harbor ]# curl harbor1.test.com    &lt;!--测试解析效果--&gt;</div><div class="line">&lt;!doctype html&gt;</div><div class="line">&lt;html&gt;</div><div class="line">&lt;head&gt;</div><div class="line">    &lt;meta charset=&quot;utf-8&quot;&gt;</div><div class="line">    &lt;title&gt;Harbor&lt;/title&gt;</div><div class="line">    &lt;base href=&quot;/&quot;&gt;</div><div class="line">    &lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot;&gt;</div><div class="line">    &lt;link rel=&quot;icon&quot; type=&quot;image/x-icon&quot; href=&quot;favicon.ico?v=2&quot;&gt;</div><div class="line">&lt;/head&gt;</div><div class="line">&lt;body style=&quot;overflow-y: hidden;&quot;&gt;</div><div class="line">    &lt;harbor-app&gt;</div><div class="line">        &lt;div class=&quot;spinner spinner-lg app-loading&quot;&gt;</div><div class="line">            Loading...</div><div class="line">        &lt;/div&gt;</div><div class="line">    &lt;/harbor-app&gt;</div><div class="line">&lt;link rel=&quot;stylesheet&quot; href=&quot;/static/clarity-ui.min.css&quot;&gt;</div><div class="line">&lt;link rel=&quot;stylesheet&quot; href=&quot;/static/clarity-icons.min.css&quot;&gt;</div><div class="line">&lt;link rel=&quot;stylesheet&quot; href=&quot;/static/styles.css&quot;&gt;</div><div class="line">&lt;script src=&quot;/static/mutationobserver.min.js&quot;&gt;&lt;/script&gt;</div><div class="line">&lt;script src=&quot;/static/custom-elements.min.js&quot;&gt;&lt;/script&gt;</div><div class="line">&lt;script src=&quot;/static/clarity-icons.min.js&quot;&gt;&lt;/script&gt;</div><div class="line">&lt;script src=&quot;/static/build.min.js&quot;&gt;&lt;/script&gt;</div><div class="line">&lt;/body&gt;</div><div class="line">&lt;/html&gt;</div><div class="line">root [ /harbor ]# curl harbor2.test.com                                                                  </div><div class="line">&lt;!doctype html&gt;</div><div class="line">&lt;html&gt;</div><div class="line">&lt;head&gt;</div><div class="line">    &lt;meta charset=&quot;utf-8&quot;&gt;</div><div class="line">    &lt;title&gt;Harbor&lt;/title&gt;</div><div class="line">    &lt;base href=&quot;/&quot;&gt;</div><div class="line">    &lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot;&gt;</div><div class="line">    &lt;link rel=&quot;icon&quot; type=&quot;image/x-icon&quot; href=&quot;favicon.ico?v=2&quot;&gt;</div><div class="line">&lt;/head&gt;</div><div class="line"></div><div class="line">&lt;body style=&quot;overflow-y: hidden;&quot;&gt;</div><div class="line">    &lt;harbor-app&gt;</div><div class="line">        &lt;div class=&quot;spinner spinner-lg app-loading&quot;&gt;</div><div class="line">            Loading...</div><div class="line">        &lt;/div&gt;</div><div class="line">    &lt;/harbor-app&gt;</div><div class="line">&lt;link rel=&quot;stylesheet&quot; href=&quot;/static/clarity-ui.min.css&quot;&gt;</div><div class="line">&lt;link rel=&quot;stylesheet&quot; href=&quot;/static/clarity-icons.min.css&quot;&gt;</div><div class="line">&lt;link rel=&quot;stylesheet&quot; href=&quot;/static/styles.css&quot;&gt;</div><div class="line">&lt;script src=&quot;/static/mutationobserver.min.js&quot;&gt;&lt;/script&gt;</div><div class="line">&lt;script src=&quot;/static/custom-elements.min.js&quot;&gt;&lt;/script&gt;</div><div class="line">&lt;script src=&quot;/static/clarity-icons.min.js&quot;&gt;&lt;/script&gt;</div><div class="line">&lt;script src=&quot;/static/build.min.js&quot;&gt;&lt;/script&gt;</div><div class="line">&lt;/body&gt;</div><div class="line">&lt;/html&gt;</div></pre></td></tr></table></figure></p>
+<p>修改后，测试连接可以通过<br><img src="http://oys2ph34f.bkt.clouddn.com/harbor_replication_error.png" alt=""></p>
+<hr>
+<p><strong>问题2</strong>：</p>
+<hr>
+<p>在创建好复制规则后，在复制任务中所有任务的状态都变为error，镜像复制失败<br><img src="http://oys2ph34f.bkt.clouddn.com/harbor_sync_error_1.jpg" alt=""><br>解决方法：<br>检查harbor的日志发现有如下报错信息：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line">[root@harbor1 2017-12-11]# pwd</div><div class="line">/var/log/harbor/2017-12-11</div><div class="line">[root@harbor1 2017-12-11]# cat registry.log </div><div class="line">...</div><div class="line">Dec 11 14:35:01 172.18.0.1 registry[10164]: time=&quot;2017-12-11T06:35:01.800397146Z&quot; level=debug msg=&quot;authorizing request&quot; go.version=go1.7.3 http.request.host=&quot;registry:5000&quot; http.request.id=ca0deea4-ccf1-4c0c-b33d-290a099faa40 http.request.method=GET http.request.remoteaddr=&quot;172.18.0.8:47324&quot; http.request.uri=&quot;/v2/&quot; http.request.useragent=&quot;Go-http-client/1.1&quot; instance.id=3f8229fe-cb32-464c-b9a4-9a20ae9aef4a service=registry version=v2.6.2</div><div class="line">Dec 11 14:35:01 172.18.0.1 registry[10164]: time=&quot;2017-12-11T06:35:01.800720441Z&quot; level=warning msg=&quot;error authorizing context: authorization token required&quot; go.version=go1.7.3 http.request.host=&quot;registry:5000&quot; http.request.id=ca0deea4-ccf1-4c0c-b33d-290a099faa40 http.request.method=GET http.request.remoteaddr=&quot;172.18.0.8:47324&quot; http.request.uri=&quot;/v2/&quot; http.request.useragent=&quot;Go-http-client/1.1&quot; instance.id=3f8229fe-cb32-464c-b9a4-9a20ae9aef4a service=registry version=v2.6.2</div><div class="line">...</div></pre></td></tr></table></figure></p>
+<p>同时点击复制任务的日志查看，有如下报错信息：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div></pre></td><td class="code"><pre><div class="line">2017-12-11T05:19:33Z [INFO] initializing: repository: cqf/centos, tags: [], source URL: http://registry:5000, destination URL: http://harbor2.test.com, insecure: false, destination user: admin</div><div class="line">2017-12-11T05:19:33Z [INFO] initialization completed: project: cqf, repository: cqf/centos, tags: [1.0], source URL: http://registry:5000, destination URL: http://harbor2.test.com, insecure: false, destination user: admin</div><div class="line">2017-12-11T05:19:35Z [ERROR] [transfer.go:204]: an error occurred while creating project cqf on http://harbor2.test.com with user admin : failed to create project cqf on http://harbor2.test.com with user admin: 462 &lt;!DOCTYPE html PUBLIC &quot;-//W3C//DTD XHTML 1.0 Transitional//EN&quot; &quot;http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd&quot;&gt;</div><div class="line">&lt;html xmlns=&quot;http://www.w3.org/1999/xhtml&quot;&gt;</div><div class="line">&lt;head&gt;</div><div class="line">&lt;meta http-equiv=&quot;Content-Type&quot; content=&quot;text/html; charset=utf-8&quot; /&gt;</div><div class="line">&lt;title&gt;462 Forbidden Region - DOSarrest Internet Security&lt;/title&gt;</div><div class="line">&lt;link href=&quot;/DOAError/assets/css/core.css&quot; rel=&quot;stylesheet&quot; type=&quot;text/css&quot; /&gt;</div><div class="line">&lt;link rel=&quot;shortcut icon&quot; href=&quot;/DOAError/assets/images/favicon.ico&quot; /&gt;&lt;link rel=&quot;apple-touch-icon&quot; href=&quot;/DOAError/assets/images/icon-protection.png&quot; /&gt;</div><div class="line">&lt;script&gt;</div><div class="line">function id_process(n)&#123;for(var t=n+&quot;=&quot;,r=document.cookie.split(&quot;;&quot;),e=0;e&lt;r.length;e++)&#123;for(var g=r[e];&quot; &quot;==g.charAt(0);)g=g.substring(1,g.length);if(0==g.indexOf(t))return g.substring(t.length,g.length)&#125;return null&#125;;</div><div class="line">&lt;/script&gt;</div><div class="line">&lt;/head&gt;</div></pre></td></tr></table></figure></p>
+<p>报错信息与前面的测试连接失败比较类似，因此将Master节点上的所有harbor容器全都修改下/etc/resolv.conf和/etc/hosts两个文件，后验证成功，同步正常。<br><strong>PS</strong><br>为什么会出现这个无法解析的问题，待后续再解决。</p>
 
       
     </div>
@@ -568,8 +611,17 @@
       
 
       
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
 
-      <section class="site-overview-wrap sidebar-panel sidebar-panel-active">
+      <section class="site-overview-wrap sidebar-panel">
         <div class="site-overview">
           <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
             
@@ -650,6 +702,22 @@
       </section>
 
       
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#harbor-安装（HTTPS模式）"><span class="nav-number">1.</span> <span class="nav-text">harbor 安装（HTTPS模式）</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#harbor镜像同步"><span class="nav-number">2.</span> <span class="nav-text">harbor镜像同步</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#为什么需要镜像同步"><span class="nav-number">2.1.</span> <span class="nav-text">为什么需要镜像同步</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Harbor的镜像同步机制"><span class="nav-number">2.2.</span> <span class="nav-text">Harbor的镜像同步机制</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Harbor的多级部署"><span class="nav-number">2.3.</span> <span class="nav-text">Harbor的多级部署</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#镜像同步配置"><span class="nav-number">2.4.</span> <span class="nav-text">镜像同步配置</span></a></li></ol></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
 
       
 
@@ -677,7 +745,7 @@
     
       <span class="post-meta-item-text">Site words total count&#58;</span>
     
-    <span title="Site words total count">6.8k</span>
+    <span title="Site words total count">8.8k</span>
   
 </div>
 
