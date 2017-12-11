@@ -5,7 +5,11 @@
     <entry>
       <title><![CDATA[用Harbor实现容器镜像仓库的管理和运维<三>]]></title>
       <url>/2017/12/10/harbor_install-3/</url>
-      <content type="html"><![CDATA[<h1 id="harbor-安装（HTTPS模式）"><a href="#harbor-安装（HTTPS模式）" class="headerlink" title="harbor 安装（HTTPS模式）"></a>harbor 安装（HTTPS模式）</h1><p>在加入了根证书后用浏览器访问出现证书错误，于是用脚本再次生成新的证书并导入依旧证书错误，终于在harbor.cfg中找到了原因（没有仔细查看配置说明，走了好多弯路），配置文件中标注了如果使用自签名将核实远程证书设为off<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line">[root@harbor1 harbor]# vi harbor.cfg</div><div class="line">...</div><div class="line">#Determine whether the job service should verify the ssl cert when it connects to a remote registry.</div><div class="line">#Set this flag to off when the remote registry uses a self-signed or untrusted certificate.</div><div class="line">verify_remote_cert = on  &lt;!--将这里的on改为off--&gt;</div></pre></td></tr></table></figure></p>
+      <content type="html"><![CDATA[<h1 id="harbor-安装（HTTPS模式）"><a href="#harbor-安装（HTTPS模式）" class="headerlink" title="harbor 安装（HTTPS模式）"></a>harbor 安装（HTTPS模式）</h1><p>问题1：<br>Error response from daemon: Get <a href="https://harbor1.test.com/v1/users/" target="_blank" rel="external">https://harbor1.test.com/v1/users/</a>: x509: certificate signed by unknown authority<br>用命令行登陆harbor时报错，具体如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">[root@harbor1 harbor]# docker login harbor1.test.com</div><div class="line">Username (admin): admin</div><div class="line">Password: </div><div class="line">Error response from daemon: Get https://harbor1.test.com/v1/users/: x509: certificate signed by unknown authority</div></pre></td></tr></table></figure>
+<p>解决方法：<br>由于自创的证书还没有加入系统级别信任，因此需要将证书加入系统级别信任<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">[root@harbor1 harbor]# cp /data/cert/server.crt /etc/pki/ca-trust/source/anchors/reg.test.com.crt</div><div class="line">[root@harbor1 harbor]# update-ca-trust</div></pre></td></tr></table></figure></p>
+<p>在加入了根证书后用浏览器访问出现证书错误，于是用脚本再次生成新的证书并导入依旧证书错误，终于在harbor.cfg中找到了原因（没有仔细查看配置说明，走了好多弯路），配置文件中标注了如果使用自签名将核实远程证书设为off<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line">[root@harbor1 harbor]# vi harbor.cfg</div><div class="line">...</div><div class="line">#Determine whether the job service should verify the ssl cert when it connects to a remote registry.</div><div class="line">#Set this flag to off when the remote registry uses a self-signed or untrusted certificate.</div><div class="line">verify_remote_cert = on  &lt;!--将这里的on改为off--&gt;</div></pre></td></tr></table></figure></p>
+<p>在加入了根证书后用浏览器访问出现证书错误，于是用脚本再次生成新的证书并导入依旧证书错误，终于在harbor.cfg中找到了原因（没有仔细查看配置说明，走了好多弯路），配置文件中标注了如果使用自签名将核实远程证书设为off<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line">[root@harbor1 harbor]# vi harbor.cfg</div><div class="line">...</div><div class="line">#Determine whether the job service should verify the ssl cert when it connects to a remote registry.</div><div class="line">#Set this flag to off when the remote registry uses a self-signed or untrusted certificate.</div><div class="line">verify_remote_cert = on  &lt;!--将这里的on改为off--&gt;</div></pre></td></tr></table></figure></p>
 <h1 id="harbor镜像同步"><a href="#harbor镜像同步" class="headerlink" title="harbor镜像同步"></a>harbor镜像同步</h1><h2 id="为什么需要镜像同步"><a href="#为什么需要镜像同步" class="headerlink" title="为什么需要镜像同步"></a>为什么需要镜像同步</h2><hr>
 <p>由于对镜像的访问是一个核心的容器概念，在实际使用过程中，一个镜像库可能是不够用的，下例情况下，我们可能会需要部署多个镜像仓库：</p>
 <p>国外的公有镜像下载过慢，需要一个中转仓库进行加速<br>容器规模较大，一个镜像仓库不堪重负<br>对系统稳定性要求高，需要多个仓库保证高可用性<br>镜像仓库有多级规划，下级仓库依赖上级仓库<br>更常用的场景是，在企业级软件环境中，会在软件开发的不同阶段存在不同的镜像仓库，</p>
@@ -18,15 +22,10 @@
 <hr>
 <p><img src="http://oys2ph34f.bkt.clouddn.com/harbor_replication-1.jpg" alt="harbor_replication-1"></p>
 <h2 id="Harbor的多级部署"><a href="#Harbor的多级部署" class="headerlink" title="Harbor的多级部署"></a>Harbor的多级部署</h2><hr>
-<p>在实际的企业级生产运维场景，往往需要跨地域，跨层级进行镜像的同步复制，比如从开发到测试再到生产。<br>这一部署场景可简化如下图：</p>
+<p>在实际的企业级生产运维场景，往往需要跨地域，跨层级进行镜像的同步复制，比如集团企业从总部到省公司，由省公司再市公司的场景。<br>这一部署场景可简化如下图：</p>
 <hr>
 <p><img src="http://oys2ph34f.bkt.clouddn.com/harbor_replication-2.jpg" alt="harbor_replication-2"><br>更复杂的部署场景如下图：<br><img src="http://oys2ph34f.bkt.clouddn.com/harbor_replication-3.jpg" alt="harbor_replication-3"></p>
-<h2 id="镜像同步配置"><a href="#镜像同步配置" class="headerlink" title="镜像同步配置"></a>镜像同步配置</h2><p><strong>环境介绍</strong></p>
-<hr>
-<p>Master：192.168.10.19  —&gt;   harbor1.test.com<br>Slave ：192.168.10.21  —&gt;   harbor2.test.com</p>
-<hr>
-<p>两个harbor节点都采用的HTTP模式</p>
-<p>首先登陆到harbor的网页，进入到系统管理-&gt;复制管理<br><img src="http://oys2ph34f.bkt.clouddn.com/harbor_sync_1.jpg" alt="harbor_sync_1"><br>点击“+目标”，创建复制的目标，并测试连接。<br><img src="http://oys2ph34f.bkt.clouddn.com/harbor_sync_2.jpg" alt="harbor_sync_2"><br>如下为创建好一个复制目标<br><img src="http://oys2ph34f.bkt.clouddn.com/harbor_sync_3.jpg" alt="harbor_sync_3"><br>目标创建好之后，返回到项目并且进入需要同步的项目中，并进入复制规则页面<br><img src="http://oys2ph34f.bkt.clouddn.com/harbor_sync_4.jpg" alt="harbor_sync_4"><br>点击“+复制规则”，创建镜像同步的规则并且再次测试连接是否成功。<br><img src="http://oys2ph34f.bkt.clouddn.com/harbor_sync_5.jpg" alt="harbor_sync_5"><br>待测试连接成功后，点击确定。创建好的复制规则如下：<br><img src="http://oys2ph34f.bkt.clouddn.com/harbor_sync_6.jpg" alt="harbor_sync_6"><br>可以看到在页面下方的复制任务栏里会将需要同步的镜像作为任务显示出来，，这里可以看到所有任务的状态都变为finished，说明同步已经完成。<br>登陆到Slave节点harbor2.test.com，可以看到在原本只有一个library项目的基础上，自动增加了一个cqf项目，并且里面已经包含了相关的镜像，同步成功。<br><img src="http://oys2ph34f.bkt.clouddn.com/harbor_sync_7.jpg" alt="harbor_sync_7"></p>
+<h2 id="镜像同步配置"><a href="#镜像同步配置" class="headerlink" title="镜像同步配置"></a>镜像同步配置</h2><p><strong>环境介绍</strong><br>Master：192.168.10.19  —&gt;   harbor1.test.com<br>Slave：192.168.10.21  —&gt;   harbor2.test.com<br>两个harbor节点都采用的HTTP模式<br>首先登陆到harbor的网页，进入到系统管理-&gt;复制管理<br><img src="http://oys2ph34f.bkt.clouddn.com/harbor_sync_1.jpg" alt="harbor_sync_1"><br>点击“+目标”，创建复制的目标，并测试连接。<br><img src="http://oys2ph34f.bkt.clouddn.com/harbor_sync_2.jpg" alt="harbor_sync_2"><br>如下为创建好一个复制目标<br><img src="http://oys2ph34f.bkt.clouddn.com/harbor_sync_3.jpg" alt="harbor_sync_3"><br>目标创建好之后，返回到项目并且进入需要同步的项目中，并进入复制规则页面<br><img src="http://oys2ph34f.bkt.clouddn.com/harbor_sync_4.jpg" alt="harbor_sync_4"><br>点击“+复制规则”，创建镜像同步的规则并且再次测试连接是否成功。<br><img src="http://oys2ph34f.bkt.clouddn.com/harbor_sync_5.jpg" alt="harbor_sync_5"><br>待测试连接成功后，点击确定。创建好的复制规则如下：<br><img src="http://oys2ph34f.bkt.clouddn.com/harbor_sync_6.jpg" alt="harbor_sync_6"><br>可以看到在页面下方的复制任务栏里会将需要同步的镜像作为任务显示出来，，这里可以看到所有任务的状态都变为finished，说明同步已经完成。<br>登陆到Slave节点harbor2.test.com，可以看到在原本只有一个library项目的基础上，自动增加了一个cqf项目，并且里面已经包含了相关的镜像，同步成功。<br><img src="http://oys2ph34f.bkt.clouddn.com/harbor_sync_7.jpg" alt="harbor_sync_7"></p>
 <hr>
 <p><strong>问题1</strong>：</p>
 <hr>
@@ -261,14 +260,14 @@
   
     
     <entry>
-      <title><![CDATA[分类]]></title>
-      <url>/categories/index.html</url>
+      <title><![CDATA[标签]]></title>
+      <url>/tags/index.html</url>
       <content type="html"></content>
     </entry>
     
     <entry>
-      <title><![CDATA[标签]]></title>
-      <url>/tags/index.html</url>
+      <title><![CDATA[分类]]></title>
+      <url>/categories/index.html</url>
       <content type="html"></content>
     </entry>
     
